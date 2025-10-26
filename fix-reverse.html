@@ -16,12 +16,6 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     }
 
-    code {
-      background: #0e1320;
-      padding: .1rem .3rem;
-      border-radius: .25rem;
-    }
-
     model-viewer {
       width: 100%;
       height: 100%;
@@ -33,233 +27,340 @@
       cursor: grabbing;
     }
 
+    /* Hotspot button styling */
+    .hotspot {
+      all: unset;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .5rem .7rem;
+      border-radius: .6rem;
+      background: rgba(20, 25, 36, 0.85);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      color: #e7e9ee;
+      font-weight: 600;
+      font-size: .9rem;
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+      user-select: none;
+      z-index: 9999;
+    }
+
+    .hotspot:hover {
+      transform: translateY(-1px);
+      background: rgba(27, 33, 47, 0.9);
+    }
+
+    .hotspot:active {
+      transform: translateY(0);
+    }
+
+    .hotspot .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .9;
+      animation: pulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: .9;
+      }
+
+      50% {
+        transform: scale(1.25);
+        opacity: .5;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: .9;
+      }
+    }
+
+    /* Toast */
     .toast {
       position: fixed;
       left: 50%;
-      bottom: 16px;
-      transform: translateX(-50%);
-      background: #111827;
-      color: #e5e7eb;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 12px;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(20px);
+      background: #111624;
+      color: #e7e9ee;
+      padding: .8rem 1rem;
+      border-radius: .7rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .06);
       opacity: 0;
-      transition: opacity .2s ease;
       pointer-events: none;
-      border: 1px solid #384152;
+      transition: opacity .2s ease, transform .2s ease;
+      max-width: min(92vw, 520px);
+      text-align: center;
+      z-index: 10;
+      font-size: .95rem;
     }
 
     .toast.show {
-      opacity: 0.9;
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Optional legend */
+    .legend {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: rgba(15, 18, 28, .7);
+      padding: .5rem .75rem;
+      border-radius: .5rem;
+      font-size: .85rem;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+      z-index: 5;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    .modal[aria-hidden="false"] {
+      display: flex;
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      backdrop-filter: blur(2px);
+    }
+
+    .modal-dialog {
+      position: relative;
+      width: min(92vw, 560px);
+      max-height: min(85vh, 720px);
+      background: #0f1320;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 255, 255, .06);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      all: unset;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .modal-body {
+      padding: 14px 16px;
+      overflow: auto;
+    }
+
+    .modal-text {
+      margin: 0 0 10px;
+      font-size: .95rem;
+      color: #cfd3dd;
+    }
+
+    .img-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .img-grid img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .06);
+    }
+
+    model-viewer::part(hotspot) {
+      pointer-events: none;
+    }
+
+    /* wrapper ignores events */
+    .hotspot {
+      pointer-events: auto;
+      /* slotted element handles events */
+      position: relative;
+      /* create a stacking context */
+      z-index: 9000;
+      /* ensure it’s above the 3D canvas */
+    }
+
+    /* Prevent body scroll when modal open */
+    body.modal-open {
+      overflow: hidden;
     }
   </style>
 </head>
 
 <body>
 
-  <model-viewer id="viewer" ar camera-controls shadow-intensity="1" exposure="1" disable-zoom="false"
-    interaction-prompt="auto" disable-tap>
+  <model-viewer id="viewer" ar shadow-intensity="1" exposure="1" disable-zoom="false" interaction-prompt="auto" camera-controls
+    disable-tap>
+    <!-- FLOOR HOTSPOTS -->
+    <button slot="hotspot-floor-2" class="hotspot" data-position="0 -0.1 0" data-normal="0 1 0"
+      data-visibility-attribute="visible" aria-label="Floor 2" title="Floor 2"><span class="dot"
+        aria-hidden="true"></span>2</button>
+
+    <button slot="hotspot-floor-4" class="hotspot" data-position="0.2 0 0" data-normal="0 1 0"
+      data-visibility-attribute="visible" aria-label="Floor 4" title="Floor 4"><span class="dot"
+        aria-hidden="true"></span>4</button>
+
+    <button slot="hotspot-floor-5" class="hotspot" data-position="-0.15 0.03 0" data-normal="0 1 0"
+      data-visibility-attribute="visible" aria-label="Floor 5" title="Floor 5"><span class="dot"
+        aria-hidden="true"></span>5</button>
+
+    <button slot="hotspot-floor-7" class="hotspot" data-position="0 0.1 0" data-normal="0 1 0"
+      data-visibility-attribute="visible" aria-label="Floor 7" title="Floor 7"><span class="dot"
+        aria-hidden="true"></span>7</button>
+
+    <button slot="hotspot-floor-8" class="hotspot" data-position="-0.25 0.11 0" data-normal="0 1 0"
+      data-visibility-attribute="visible" aria-label="Floor 8" title="Floor 8"
+      onclick="console.log('Floor 8 button clicked')"><span class="dot" aria-hidden="true"></span>8</button>
   </model-viewer>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Modal -->
+  <div id="floor-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog" role="document">
+      <div class="modal-header">
+        <h2 id="modal-title" class="modal-title">Floor</h2>
+        <button class="modal-close" aria-label="Close" data-close>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-text" class="modal-text"></p>
+        <div id="modal-images" class="img-grid"></div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const MODEL = 'images_3d.glb';
-    viewer.src = MODEL;
-  </script>
-
-  <!-- Clickable Y-level planes -->
-  <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-
-    const mv = document.getElementById('viewer');
+    const viewer = document.getElementById('viewer');
     const toast = document.getElementById('toast');
 
-    // Helpers to access internal THREE objects from <model-viewer>
-    function getThree(el, key) {
-      return Object.getOwnPropertySymbols(el).find(s => s.description === key) ? el[Object.getOwnPropertySymbols(el).find(s => s.description === key)] : null;
-    }
-    const getThreeScene = el => getThree(el, 'scene');
-    const getThreeCamera = el => getThree(el, 'camera');
-    const getThreeRenderer = el => getThree(el, 'renderer');
+    // Load the model
+    viewer.src = MODEL;
 
-    // Tiny toast
-    function say(msg) {
-      toast.textContent = msg;
+    // ---- Camera presets per floor ----
+    const FLOOR_PRESETS = {
+      2: { target: { x: 0, y: 6, z: 0 }, orbit: '25deg 70deg 12m', fov: '35deg' },
+      4: { target: { x: 0, y: 12, z: 0 }, orbit: '45deg 70deg 12m', fov: '35deg' },
+      5: { target: { x: 0, y: 15, z: 0 }, orbit: '65deg 70deg 12m', fov: '35deg' },
+      7: { target: { x: 0, y: 21, z: 0 }, orbit: '95deg 70deg 12m', fov: '35deg' },
+      8: { target: { x: 0, y: 24, z: 0 }, orbit: '120deg 70deg 12m', fov: '35deg' },
+    };
+
+    // ---- Content per floor (edit images/text) ----
+    // Replace the image paths with your real files
+    const FLOOR_CONTENT = {
+      2: { title: '2. Stock', text: 'Material: Papier, Pappe, Holz, Metallstangen und Acrylglas', images: ['images/2-1.jpeg', 'images/2-2.jpeg', 'images/2-3.jpeg', 'images/2-4.jpeg', 'images/2-5.jpeg', 'images/2-6.jpeg'] },
+      4: { title: '4. Stock', text: 'Material: Papier, Pappe, Holz, Metallgewebe, Karton, 3D-Drucke und Kunststoff', images: ['images/4-1.jpeg', 'images/4-2.jpeg', 'images/4-3.jpeg', 'images/4-4.jpeg', 'images/4-5.jpeg', 'images/4-6.jpeg', 'images/4-7.jpeg', 'images/4-8.jpeg', 'images/4-9.jpeg', 'images/4-10.jpeg', 'images/4-11.jpeg'] },
+      5: { title: '5. Stock', text: 'Material: Finnpappe, Papier, MBF Platten und Styropor', images: ['images/5-1.jpeg', 'images/5-2.jpeg', 'images/5-3.jpeg', 'images/5-4.jpeg'] },
+      7: { title: '7. Stock', text: 'Material: Lehm, Metallgewebe, Holz, Pappe und kleine Metallstangen ', images: ['images/7-1.jpeg'] },
+      8: { title: '8. Stock', text: 'Material: Kunststoff, Metall, Papier, Braunpappe und Finnpappe', images: ['images/8-1.jpeg'] },
+    };
+
+    // Attach click handlers to all floor hotspots
+    ['2', '4', '5', '7', '8'].forEach(floor => {
+      const btn = viewer.querySelector(`button[slot="hotspot-floor-${floor}"]`);
+      if (!btn) return;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const n = parseInt(floor, 10);
+        openFloorModal(n);
+      });
+    });
+
+
+    // Toast helper
+    let toastTimer = null;
+    function showToast(message, duration = 2000) {
+      toast.textContent = message;
       toast.classList.add('show');
-      clearTimeout(say._t);
-      say._t = setTimeout(() => toast.classList.remove('show'), 1200);
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
     }
 
-    // Build planes along a given axis and make them interactive
-    function buildAxisPlanes(scene, dims, { axis = 'y', step = 20, autoFit = true, groupName = 'yPlanes' }) {
-      const old = scene.getObjectByName(groupName);
-      if (old) scene.remove(old);
+    // ---- Modal logic ----
+    const modal = document.getElementById('floor-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalText = document.getElementById('modal-text');
+    const modalImages = document.getElementById('modal-images');
+    let lastFocused = null;
 
-      const group = new THREE.Group();
-      group.name = groupName;
+    function openFloorModal(n) {
+      const content = FLOOR_CONTENT[n] || { title: `Floor ${n}`, text: 'No description provided.', images: [] };
+      modalTitle.textContent = content.title;
+      modalText.textContent = content.text;
+      modalImages.innerHTML = '';
 
-      const half = { x: (dims.x || 1) / 2, y: (dims.y || 1) / 2, z: (dims.z || 1) / 2 };
-      const spanX = Math.max(1, dims.x || 1) * 1.2;
-      const spanY = Math.max(1, dims.y || 1) * 1.2;
-      const spanZ = Math.max(1, dims.z || 1) * 1.2;
-
-      let planeGeo;
-      if (axis === 'y') {
-        planeGeo = new THREE.PlaneGeometry(spanX, spanZ);
-        planeGeo.rotateX(-Math.PI / 2);
-      } else {
-        console.warn('Only axis="y" supported for click planes in this build.'); return;
-      }
-      const edgeGeo = new THREE.EdgesGeometry(planeGeo);
-
-      const range = 2 * half.y;
-      let s = step;
-      if (autoFit && range > 0 && range < step * 2) s = range / 8;
-
-      const min = -half.y, max = half.y;
-      group.userData = { axis, step: s, min, max };
-
-      const baseFill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.08, depthTest: false, depthWrite: false });
-      const baseEdge = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.35, depthTest: false });
-
-      for (let pos = min; pos <= max + 1e-6; pos += s) {
-        const fill = new THREE.Mesh(planeGeo, baseFill.clone());
-        const edges = new THREE.LineSegments(edgeGeo, baseEdge.clone());
-        fill.position.set(0, pos, 0);
-        edges.position.set(0, pos, 0);
-        fill.renderOrder = 9000;
-        edges.renderOrder = 9001;
-
-        fill.userData = { type: 'yPlane', y: pos, partnerId: `edge-${pos}` };
-        edges.userData = { type: 'yPlaneEdge', y: pos, partnerId: `fill-${pos}` };
-        fill.name = `fill-${pos}`;
-        edges.name = `edge-${pos}`;
-
-        group.add(fill);
-        group.add(edges);
-      }
-
-      scene.add(group);
-      return group;
-    }
-
-    // Interactivity: hover + click
-    function enableYPlanePicking({ mv, scene, camera, group }) {
-      const ray = new THREE.Raycaster();
-      const mouse = new THREE.Vector2();
-      let hoverFill = null;
-      let selectedFill = null;
-
-      function setCursor(el, style) { el.style.cursor = style; }
-
-      function setFillStyle(mesh, { hover = false, selected = false }) {
-        if (!mesh || !mesh.material) return;
-        const edge = group.getObjectByName(`edge-${mesh.userData.y}`);
-        // base
-        mesh.material.opacity = 0.08;
-        if (edge) edge.material.opacity = 0.35;
-
-        if (hover) {
-          mesh.material.opacity = 0.18;
-          if (edge) edge.material.opacity = 0.6;
-        }
-        if (selected) {
-          mesh.material.opacity = 0.28;
-          if (edge) edge.material.opacity = 0.9;
-        }
-      }
-
-      function pick(clientX, clientY) {
-        const r = mv.getBoundingClientRect();
-        mouse.x = ((clientX - r.left) / r.width) * 2 - 1;
-        mouse.y = -((clientY - r.top) / r.height) * 2 + 1;
-        ray.setFromCamera(mouse, camera);
-        // Only test against "fill" meshes (skip edges)
-        const fills = group.children.filter(o => o.isMesh && o.userData.type === 'yPlane');
-        const hit = ray.intersectObjects(fills, true)[0];
-        return hit ? hit.object : null;
-      }
-
-      mv.addEventListener('pointermove', (e) => {
-        const hit = pick(e.clientX, e.clientY);
-        if (hit !== hoverFill) {
-          if (hoverFill && hoverFill !== selectedFill) setFillStyle(hoverFill, { hover: false, selected: false });
-          hoverFill = hit;
-          if (hoverFill && hoverFill !== selectedFill) setFillStyle(hoverFill, { hover: true, selected: false });
-        }
-        setCursor(mv, hit ? 'pointer' : (mv.matches(':active') ? 'grabbing' : 'grab'));
+      (content.images || []).slice(0, 11).forEach((src, i) => {
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.alt = `${content.title} image ${i + 1}`;
+        img.src = src;
+        modalImages.appendChild(img);
       });
 
-      mv.addEventListener('click', (e) => {
-
-
-       
-        if (!e.shiftKey) return;
-
-        const hit = pick(e.clientX, e.clientY);
-        if (!hit) return;
-
-
-        // Clear previous selection
-        if (selectedFill && selectedFill !== hoverFill) setFillStyle(selectedFill, { hover: false, selected: false });
-        selectedFill = hit;
-        setFillStyle(selectedFill, { hover: false, selected: true });
-
-        const y = Number(hit.userData.y.toFixed(3));
-
-        // --- NEW: compute the slice range centered on the clicked plane
-        const { step, min, max } = group.userData || { step: 0, min: -Infinity, max: Infinity };
-        const half = (step || 0) / 2;
-        let lo = y - half;
-        let hi = y + half;
-        // clamp to overall bounds
-        lo = Math.max(min, lo);
-        hi = Math.min(max, hi);
-        lo = Number(lo.toFixed(3));
-        hi = Number(hi.toFixed(3));
-
-        // Recenter camera target on selected Y
-        const currentTarget = mv.getAttribute('camera-target') || '0m 0m 0m';
-        const [tx, , tz] = currentTarget.split(/\s+/);
-        mv.setAttribute('camera-target', `${tx ?? '0m'} ${y}m ${tz ?? '0m'}`);
-
-        // Announce + event for your app to hook onto (now includes range)
-        const detail = { y, range: [lo, hi] };
-        mv.dispatchEvent(new CustomEvent('yplane-select', { detail, bubbles: true }));
-
-        // ✅ Print to console with the slice range
-        console.log('[slice-range]', detail);
-
-        // Optional toast
-        say(`Y = ${y}  •  range [${lo} … ${hi}]`);
-      });
-
+      lastFocused = document.activeElement;
+      document.body.classList.add('modal-open');
+      modal.setAttribute('aria-hidden', 'false');
+      // Focus the close button for accessibility
+      const closeBtn = modal.querySelector('[data-close]');
+      closeBtn && closeBtn.focus();
     }
 
-    mv.addEventListener('load', () => {
-      const scene = getThreeScene(mv);
-      const camera = getThreeCamera(mv);
-      const renderer = getThreeRenderer(mv);
-      if (!scene || !camera || !renderer) {
-        console.warn('Could not access THREE internals inside <model-viewer>.'); return;
-      }
+    function closeModal() {
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+      if (lastFocused) lastFocused.focus();
+    }
 
-      const dims = mv.getDimensions?.() ?? { x: 1, y: 1, z: 1 };
-      const group = buildAxisPlanes(scene, dims, { axis: 'y', step: 20, autoFit: true, groupName: 'yPlanes' });
-
-      enableYPlanePicking({ mv, scene, camera, group });
-
-      // Keep overlays in front
-      renderer.sortObjects = false;
+    // Close interactions
+    modal.addEventListener('click', (e) => {
+      if (e.target.matches('[data-close]') || e.target.classList.contains('modal-backdrop')) closeModal();
     });
-
-    // Example: listen from the outside if you want to react in app code
-    mv.addEventListener('yplane-select', (e) => {
-      // e.detail.y is the clicked Y
-      // You could also update UI elsewhere here.
-    });
+    window.addEventListener('keydown', (e) => { if (modal.getAttribute('aria-hidden') === 'false' && e.key === 'Escape') closeModal(); });
   </script>
+
 </body>
 
 </html>
