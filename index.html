@@ -108,19 +108,6 @@
       pointer-events: auto;
     }
 
-    /* Optional legend */
-    .legend {
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      background: rgba(15, 18, 28, .7);
-      padding: .5rem .75rem;
-      border-radius: .5rem;
-      font-size: .85rem;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
-      z-index: 5;
-    }
-
     /* Modal */
     .modal {
       position: fixed;
@@ -278,15 +265,6 @@
 
     // Load the model
     viewer.src = MODEL;
-
-    // ---- Camera presets per floor ----
-    const FLOOR_PRESETS = {
-      2: { target: { x: 0, y: 6, z: 0 }, orbit: '25deg 70deg 12m', fov: '35deg' },
-      4: { target: { x: 0, y: 12, z: 0 }, orbit: '45deg 70deg 12m', fov: '35deg' },
-      5: { target: { x: 0, y: 15, z: 0 }, orbit: '65deg 70deg 12m', fov: '35deg' },
-      7: { target: { x: 0, y: 21, z: 0 }, orbit: '95deg 70deg 12m', fov: '35deg' },
-      8: { target: { x: 0, y: 24, z: 0 }, orbit: '120deg 70deg 12m', fov: '35deg' },
-    };
 
     // ---- Content per floor (edit images/text) ----
     // Replace the image paths with your real files
