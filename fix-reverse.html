@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Modellbauwende</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: #0b0d12;
+      color: #e7e9ee;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    code {
+      background: #0e1320;
+      padding: .1rem .3rem;
+      border-radius: .25rem;
+    }
+
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(1200px 600px at 50% 60%, #121621 0%, #0b0d12 60%);
+    }
+  </style>
+</head>
+
+<body>
+
+  <model-viewer id="viewer" ar camera-controls shadow-intensity="1" exposure="1" disable-zoom="false"
+    interaction-prompt="auto" disable-tap>
+  </model-viewer>
+
+  <script>
+    const MODEL = 'images_3d.glb';
+    viewer.src = MODEL;
+  </script>
+
+<!-- Helpers: grid + axes inside <model-viewer> -->
+<!-- Y-slice planes (every 20 units) inside <model-viewer> -->
+<!-- Y- and Z-slice planes inside <model-viewer> -->
+<script type="module">
+  import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+  const mv = document.getElementById('viewer');
+
+  // Access <model-viewer>'s internal THREE.Scene (stable workaround)
+  function getThreeScene(el) {
+    const sym = Object.getOwnPropertySymbols(el).find(s => s.description === 'scene');
+    return sym ? el[sym] : null;
+  }
+
+  /**
+   * Build planes along a given axis.
+   * axis: 'y' -> horizontal XZ planes every "step"
+   *       'z' -> vertical   XY planes every "step"
+   * If autoFit is true and the model span is small, the step is reduced to yield ~8 slices.
+   */
+  function buildAxisPlanes(scene, dims, { axis = 'y', step = 20, autoFit = true, groupName }) {
+    const name = groupName || (axis === 'y' ? 'yPlanes' : 'zPlanes');
+
+    // Remove any previous stack
+    const old = scene.getObjectByName(name);
+    if (old) scene.remove(old);
+
+    const group = new THREE.Group();
+    group.name = name;
+
+    const half = {
+      x: (dims.x || 1) / 2,
+      y: (dims.y || 1) / 2,
+      z: (dims.z || 1) / 2
+    };
+
+    // Sizes for the plane geometry
+    const spanX = Math.max(1, dims.x || 1) * 1.2;
+    const spanY = Math.max(1, dims.y || 1) * 1.2;
+    const spanZ = Math.max(1, dims.z || 1) * 1.2;
+
+    // Choose geometry orientation
+    // - Y planes are horizontal (XZ): PlaneGeometry(width=X, height=Z) rotated onto XZ.
+    // - Z planes are vertical   (XY): PlaneGeometry(width=X, height=Y).
+    let planeGeo, edgeGeo;
+    if (axis === 'y') {
+      planeGeo = new THREE.PlaneGeometry(spanX, spanZ);
+      planeGeo.rotateX(-Math.PI / 2); // onto XZ
+    } else if (axis === 'z') {
+      planeGeo = new THREE.PlaneGeometry(spanX, spanY); // XY by default
+    } else {
+      console.warn('Unsupported axis:', axis);
+      return;
+    }
+    edgeGeo = new THREE.EdgesGeometry(planeGeo);
+
+    // Materials: faint fill + clearer outline; depthTest off so they’re always visible
+    const fillMat = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0.08,
+      depthTest: false,
+      depthWrite: false
+    });
+    const edgeMat = new THREE.LineBasicMaterial({
+      transparent: true,
+      opacity: 0.35,
+      depthTest: false
+    });
+
+    // Determine range and (optionally) auto-refine the step so we get multiple planes
+    const range = axis === 'y' ? 2 * half.y : 2 * half.z;
+    let s = step;
+    if (autoFit && range > 0 && range < step * 2) {
+      s = range / 8; // aim ~8 slices when the model is small
+    }
+
+    const min = axis === 'y' ? -half.y : -half.z;
+    const max = axis === 'y' ?  half.y :  half.z;
+
+    // Build planes
+    // Ensure we include both ends by stepping and then clamping the last value to max
+    for (let pos = min; pos <= max + 1e-6; pos += s) {
+      const plane = new THREE.Mesh(planeGeo, fillMat.clone());
+      const edges = new THREE.LineSegments(edgeGeo, edgeMat.clone());
+
+      if (axis === 'y') {
+        plane.position.set(0, pos, 0);
+        edges.position.set(0, pos, 0);
+      } else {
+        plane.position.set(0, 0, pos);
+        edges.position.set(0, 0, pos);
+      }
+
+      // Keep on top of the mesh visually
+      plane.renderOrder = 9000;
+      edges.renderOrder = 9001;
+
+      group.add(plane);
+      group.add(edges);
+    }
+
+    scene.add(group);
+  }
+
+  mv.addEventListener('load', () => {
+    const scene = getThreeScene(mv);
+    if (!scene) { console.warn('Could not access THREE.Scene inside <model-viewer>.'); return; }
+
+    const dims = mv.getDimensions?.() ?? { x: 1, y: 1, z: 1 };
+
+    // Horizontal planes every 20 units along Y
+    buildAxisPlanes(scene, dims, { axis: 'y', step: 20, autoFit: true, groupName: 'yPlanes' });
+  });
+
+</script>
+
+
+
+</body>
+
+</html>
