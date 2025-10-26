@@ -26,6 +26,31 @@
       width: 100%;
       height: 100%;
       background: radial-gradient(1200px 600px at 50% 60%, #121621 0%, #0b0d12 60%);
+      cursor: grab;
+    }
+
+    model-viewer:active {
+      cursor: grabbing;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: #111827;
+      color: #e5e7eb;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity .2s ease;
+      pointer-events: none;
+      border: 1px solid #384152;
+    }
+
+    .toast.show {
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -36,129 +61,205 @@
     interaction-prompt="auto" disable-tap>
   </model-viewer>
 
+  <div id="toast" class="toast"></div>
+
   <script>
     const MODEL = 'images_3d.glb';
     viewer.src = MODEL;
   </script>
 
-<!-- Helpers: grid + axes inside <model-viewer> -->
-<!-- Y-slice planes (every 20 units) inside <model-viewer> -->
-<!-- Y- and Z-slice planes inside <model-viewer> -->
-<script type="module">
-  import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+  <!-- Clickable Y-level planes -->
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-  const mv = document.getElementById('viewer');
+    const mv = document.getElementById('viewer');
+    const toast = document.getElementById('toast');
 
-  // Access <model-viewer>'s internal THREE.Scene (stable workaround)
-  function getThreeScene(el) {
-    const sym = Object.getOwnPropertySymbols(el).find(s => s.description === 'scene');
-    return sym ? el[sym] : null;
-  }
-
-  /**
-   * Build planes along a given axis.
-   * axis: 'y' -> horizontal XZ planes every "step"
-   *       'z' -> vertical   XY planes every "step"
-   * If autoFit is true and the model span is small, the step is reduced to yield ~8 slices.
-   */
-  function buildAxisPlanes(scene, dims, { axis = 'y', step = 20, autoFit = true, groupName }) {
-    const name = groupName || (axis === 'y' ? 'yPlanes' : 'zPlanes');
-
-    // Remove any previous stack
-    const old = scene.getObjectByName(name);
-    if (old) scene.remove(old);
-
-    const group = new THREE.Group();
-    group.name = name;
-
-    const half = {
-      x: (dims.x || 1) / 2,
-      y: (dims.y || 1) / 2,
-      z: (dims.z || 1) / 2
-    };
-
-    // Sizes for the plane geometry
-    const spanX = Math.max(1, dims.x || 1) * 1.2;
-    const spanY = Math.max(1, dims.y || 1) * 1.2;
-    const spanZ = Math.max(1, dims.z || 1) * 1.2;
-
-    // Choose geometry orientation
-    // - Y planes are horizontal (XZ): PlaneGeometry(width=X, height=Z) rotated onto XZ.
-    // - Z planes are vertical   (XY): PlaneGeometry(width=X, height=Y).
-    let planeGeo, edgeGeo;
-    if (axis === 'y') {
-      planeGeo = new THREE.PlaneGeometry(spanX, spanZ);
-      planeGeo.rotateX(-Math.PI / 2); // onto XZ
-    } else if (axis === 'z') {
-      planeGeo = new THREE.PlaneGeometry(spanX, spanY); // XY by default
-    } else {
-      console.warn('Unsupported axis:', axis);
-      return;
+    // Helpers to access internal THREE objects from <model-viewer>
+    function getThree(el, key) {
+      return Object.getOwnPropertySymbols(el).find(s => s.description === key) ? el[Object.getOwnPropertySymbols(el).find(s => s.description === key)] : null;
     }
-    edgeGeo = new THREE.EdgesGeometry(planeGeo);
+    const getThreeScene = el => getThree(el, 'scene');
+    const getThreeCamera = el => getThree(el, 'camera');
+    const getThreeRenderer = el => getThree(el, 'renderer');
 
-    // Materials: faint fill + clearer outline; depthTest off so they’re always visible
-    const fillMat = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0.08,
-      depthTest: false,
-      depthWrite: false
-    });
-    const edgeMat = new THREE.LineBasicMaterial({
-      transparent: true,
-      opacity: 0.35,
-      depthTest: false
-    });
-
-    // Determine range and (optionally) auto-refine the step so we get multiple planes
-    const range = axis === 'y' ? 2 * half.y : 2 * half.z;
-    let s = step;
-    if (autoFit && range > 0 && range < step * 2) {
-      s = range / 8; // aim ~8 slices when the model is small
+    // Tiny toast
+    function say(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(say._t);
+      say._t = setTimeout(() => toast.classList.remove('show'), 1200);
     }
 
-    const min = axis === 'y' ? -half.y : -half.z;
-    const max = axis === 'y' ?  half.y :  half.z;
+    // Build planes along a given axis and make them interactive
+    function buildAxisPlanes(scene, dims, { axis = 'y', step = 20, autoFit = true, groupName = 'yPlanes' }) {
+      const old = scene.getObjectByName(groupName);
+      if (old) scene.remove(old);
 
-    // Build planes
-    // Ensure we include both ends by stepping and then clamping the last value to max
-    for (let pos = min; pos <= max + 1e-6; pos += s) {
-      const plane = new THREE.Mesh(planeGeo, fillMat.clone());
-      const edges = new THREE.LineSegments(edgeGeo, edgeMat.clone());
+      const group = new THREE.Group();
+      group.name = groupName;
 
+      const half = { x: (dims.x || 1) / 2, y: (dims.y || 1) / 2, z: (dims.z || 1) / 2 };
+      const spanX = Math.max(1, dims.x || 1) * 1.2;
+      const spanY = Math.max(1, dims.y || 1) * 1.2;
+      const spanZ = Math.max(1, dims.z || 1) * 1.2;
+
+      let planeGeo;
       if (axis === 'y') {
-        plane.position.set(0, pos, 0);
-        edges.position.set(0, pos, 0);
+        planeGeo = new THREE.PlaneGeometry(spanX, spanZ);
+        planeGeo.rotateX(-Math.PI / 2);
       } else {
-        plane.position.set(0, 0, pos);
-        edges.position.set(0, 0, pos);
+        console.warn('Only axis="y" supported for click planes in this build.'); return;
+      }
+      const edgeGeo = new THREE.EdgesGeometry(planeGeo);
+
+      const range = 2 * half.y;
+      let s = step;
+      if (autoFit && range > 0 && range < step * 2) s = range / 8;
+
+      const min = -half.y, max = half.y;
+      group.userData = { axis, step: s, min, max };
+
+      const baseFill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.08, depthTest: false, depthWrite: false });
+      const baseEdge = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.35, depthTest: false });
+
+      for (let pos = min; pos <= max + 1e-6; pos += s) {
+        const fill = new THREE.Mesh(planeGeo, baseFill.clone());
+        const edges = new THREE.LineSegments(edgeGeo, baseEdge.clone());
+        fill.position.set(0, pos, 0);
+        edges.position.set(0, pos, 0);
+        fill.renderOrder = 9000;
+        edges.renderOrder = 9001;
+
+        fill.userData = { type: 'yPlane', y: pos, partnerId: `edge-${pos}` };
+        edges.userData = { type: 'yPlaneEdge', y: pos, partnerId: `fill-${pos}` };
+        fill.name = `fill-${pos}`;
+        edges.name = `edge-${pos}`;
+
+        group.add(fill);
+        group.add(edges);
       }
 
-      // Keep on top of the mesh visually
-      plane.renderOrder = 9000;
-      edges.renderOrder = 9001;
-
-      group.add(plane);
-      group.add(edges);
+      scene.add(group);
+      return group;
     }
 
-    scene.add(group);
-  }
+    // Interactivity: hover + click
+    function enableYPlanePicking({ mv, scene, camera, group }) {
+      const ray = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let hoverFill = null;
+      let selectedFill = null;
 
-  mv.addEventListener('load', () => {
-    const scene = getThreeScene(mv);
-    if (!scene) { console.warn('Could not access THREE.Scene inside <model-viewer>.'); return; }
+      function setCursor(el, style) { el.style.cursor = style; }
 
-    const dims = mv.getDimensions?.() ?? { x: 1, y: 1, z: 1 };
+      function setFillStyle(mesh, { hover = false, selected = false }) {
+        if (!mesh || !mesh.material) return;
+        const edge = group.getObjectByName(`edge-${mesh.userData.y}`);
+        // base
+        mesh.material.opacity = 0.08;
+        if (edge) edge.material.opacity = 0.35;
 
-    // Horizontal planes every 20 units along Y
-    buildAxisPlanes(scene, dims, { axis: 'y', step: 20, autoFit: true, groupName: 'yPlanes' });
-  });
+        if (hover) {
+          mesh.material.opacity = 0.18;
+          if (edge) edge.material.opacity = 0.6;
+        }
+        if (selected) {
+          mesh.material.opacity = 0.28;
+          if (edge) edge.material.opacity = 0.9;
+        }
+      }
 
-</script>
+      function pick(clientX, clientY) {
+        const r = mv.getBoundingClientRect();
+        mouse.x = ((clientX - r.left) / r.width) * 2 - 1;
+        mouse.y = -((clientY - r.top) / r.height) * 2 + 1;
+        ray.setFromCamera(mouse, camera);
+        // Only test against "fill" meshes (skip edges)
+        const fills = group.children.filter(o => o.isMesh && o.userData.type === 'yPlane');
+        const hit = ray.intersectObjects(fills, true)[0];
+        return hit ? hit.object : null;
+      }
+
+      mv.addEventListener('pointermove', (e) => {
+        const hit = pick(e.clientX, e.clientY);
+        if (hit !== hoverFill) {
+          if (hoverFill && hoverFill !== selectedFill) setFillStyle(hoverFill, { hover: false, selected: false });
+          hoverFill = hit;
+          if (hoverFill && hoverFill !== selectedFill) setFillStyle(hoverFill, { hover: true, selected: false });
+        }
+        setCursor(mv, hit ? 'pointer' : (mv.matches(':active') ? 'grabbing' : 'grab'));
+      });
+
+      mv.addEventListener('click', (e) => {
 
 
+        // 👉 Only handle plane clicks when Shift is pressed
+        if (!e.shiftKey) return;
 
+        const hit = pick(e.clientX, e.clientY);
+        if (!hit) return;
+
+
+        // Clear previous selection
+        if (selectedFill && selectedFill !== hoverFill) setFillStyle(selectedFill, { hover: false, selected: false });
+        selectedFill = hit;
+        setFillStyle(selectedFill, { hover: false, selected: true });
+
+        const y = Number(hit.userData.y.toFixed(3));
+
+        // --- NEW: compute the slice range centered on the clicked plane
+        const { step, min, max } = group.userData || { step: 0, min: -Infinity, max: Infinity };
+        const half = (step || 0) / 2;
+        let lo = y - half;
+        let hi = y + half;
+        // clamp to overall bounds
+        lo = Math.max(min, lo);
+        hi = Math.min(max, hi);
+        lo = Number(lo.toFixed(3));
+        hi = Number(hi.toFixed(3));
+
+        // Recenter camera target on selected Y
+        const currentTarget = mv.getAttribute('camera-target') || '0m 0m 0m';
+        const [tx, , tz] = currentTarget.split(/\s+/);
+        mv.setAttribute('camera-target', `${tx ?? '0m'} ${y}m ${tz ?? '0m'}`);
+
+        // Announce + event for your app to hook onto (now includes range)
+        const detail = { y, range: [lo, hi] };
+        mv.dispatchEvent(new CustomEvent('yplane-select', { detail, bubbles: true }));
+
+        // ✅ Print to console with the slice range
+        console.log('[slice-range]', detail);
+
+        // Optional toast
+        say(`Y = ${y}  •  range [${lo} … ${hi}]`);
+      });
+
+    }
+
+    mv.addEventListener('load', () => {
+      const scene = getThreeScene(mv);
+      const camera = getThreeCamera(mv);
+      const renderer = getThreeRenderer(mv);
+      if (!scene || !camera || !renderer) {
+        console.warn('Could not access THREE internals inside <model-viewer>.'); return;
+      }
+
+      const dims = mv.getDimensions?.() ?? { x: 1, y: 1, z: 1 };
+      const group = buildAxisPlanes(scene, dims, { axis: 'y', step: 20, autoFit: true, groupName: 'yPlanes' });
+
+      enableYPlanePicking({ mv, scene, camera, group });
+
+      // Keep overlays in front
+      renderer.sortObjects = false;
+    });
+
+    // Example: listen from the outside if you want to react in app code
+    mv.addEventListener('yplane-select', (e) => {
+      // e.detail.y is the clicked Y
+      // You could also update UI elsewhere here.
+    });
+  </script>
 </body>
 
 </html>
